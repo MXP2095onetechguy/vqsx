@@ -1,0 +1,10 @@
+{
+  "show-checkboxes": true,
+  "archive-with-date": true,
+  "append-archive-date": true,
+  "archive-date-separator": "~",
+  "archive-date-format": "MMMM DD, YYYY hh:mm:ss A",
+  "date-format": "MMMM DD, YYYY hh:mm:ss A",
+  "time-format": "HH:mm:ss",
+  "date-display-format": "MMMM DD, YYYY"
+}
