@@ -1,0 +1,16 @@
+# Ignore .DS_Store
+.DS_Store
+**/.DS_Store
+
+# Ignore workspace
+.obsidian/workspace.json
+node_modules/
+
+# Ignore compiled output
+a.xml
+a.txt
+a.tout
+a.json
+*.xml
+out/
+_site/
