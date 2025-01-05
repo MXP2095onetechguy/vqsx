@@ -39,7 +39,7 @@ Here are the supported colors:
 | 6              | Bright Orange         | \#FFAA55  |
 | 7              | Bright Pink           | \#FF69B4  |
 | 8              | Bright Lime           | \#AAFF55  |
-| 9              | Bright Sky Blue       | \#55AAFF  |
+| 9 **!**        | Bright Sky Blue       | \#55AAFF  |
 | 10             | Bright Purple         | \#AA55FF  |
 | 11             | Bright Teal           | \#55FFAA  |
 | 12             | Azure                 | \#F0FFFF  |
@@ -51,5 +51,8 @@ Here are the supported colors:
 | 18             | Brown                 | \#8B4513  |
 | 19             | Light Brown           | \#BC8F8F  |
 | 20             | Tan                   | \#D2B48C  |
-| 21-255         | Bright Red (Reserved) | \#FF55555 |
-The reserved color if selected always defaults to red.
+| 21             | Gold                  | \#FFD700  |
+| 22-255         | Bright Red (Reserved) | \#FF55555 |
+The reserved color if selected always defaults to red. Reserved colors can be redefined by the implementation or hardware; they can be vendor-specific extensions. For portability reasons, always stick to the unreserved and well-defined colors.
+
+**!** Colors starting with 9 are extended colors. These are still mandatory.
