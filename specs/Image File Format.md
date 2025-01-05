@@ -18,7 +18,6 @@ Here is the header definition:
 | Color Depth     | 9              | 1            | A toggle for either WB or Index-color graphics. |
 | Bytecode Length | 10             | 8            | Size of the bytecode section in bytes.          |
 | Padding         | 18             | 14           | Padding in NUL characters. Reserved space.      |
-|                 |                |              |                                                 |
 The header is designed to be aligned and packable in 32 bytes.
 The *Color Depth* field is a toggle, where 0 means WB graphics and a non-0 means Index-color graphics.
 ## Bytecode
