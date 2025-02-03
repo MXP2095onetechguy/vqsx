@@ -10,6 +10,7 @@ from .constants import inst_to_int, int_to_inst, inst_to_name
 from .constants import SetOriginValues
 from .constants import StatusFlags
 from .constants import STATUS_ZERO, STATUS_HALTED, STATUS_NEXT, STATUS_FAULT
+from .constants import status_stringify
 from .constants import VQSXI_MAGIC
 
 from .types import VQsXException
@@ -28,6 +29,8 @@ from .disasm import Disassembler
 
 from .vqsx4 import VQsXForthInterpreter
 
+from .observerlib import TurtleObserver, obsrv
+
 __all__ = ["Colors",
            "name_to_index", "index_to_name", "name_to_str", "str_to_name",
            "Instructions", 
@@ -35,6 +38,7 @@ __all__ = ["Colors",
            "StatusFlags",
            "STATUS_ZERO", "STATUS_HALTED", "STATUS_NEXT", "STATUS_FAULT",
            "inst_to_int", "int_to_inst", "inst_to_name",
+           "status_stringify",
            "VQSXI_MAGIC",
 
            "VQsXException",
@@ -49,5 +53,7 @@ __all__ = ["Colors",
            "Assembler", "Builder",
            "Disassembler",
 
-           "VQsXForthInterpreter"
+           "VQsXForthInterpreter",
+
+           "TurtleObserver", "obsrv"
            ]

@@ -1,6 +1,6 @@
 VQsX is designed to execute from RAM. VQsX is a little-endian architecture. The word size of VQsX is 16 bits, paired with 64-bit addressing. The byte size for VQsX is still 8-bits.
 
-All instructions in VQsX are variable-length encoded. The first byte is the instruction before fetching n-more bytes as the operand(s) depending on the fetched instruction. 
+All instructions in VQsX are variable-length encoded. The first byte is the instruction before fetching n-more bytes as the operand(s) depending on the fetched instruction.  What is unique about the operand fetching is that it also increments the [IPC](Registers.md) register.
 
 VQsX uses clock signals for execution. Execution is triggered on rising-edge signals. This is to allow compatibility for a wide-array of components and tooling.
 

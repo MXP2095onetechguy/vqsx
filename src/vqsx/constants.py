@@ -1,4 +1,5 @@
 import enum
+import io, os
 import typing, types
 
 """
@@ -9,7 +10,9 @@ __all__ = ["Colors",
            "name_to_index","index_to_name",
            "name_to_str","str_to_name",
 
-           "INSTRUCTION_PACK", "INSTRUCTION_BINARYOP1_PACK", "INSTRUCTION_BINARYOP8_PACK", "INSTRUCTION_UNARY1_PACK", "INSTRUCTION_UNARY8_PACK", "INSTRUCTION_UNARYF_PACK",
+           "INSTRUCTION_PACK", 
+           "INSTRUCTION_RAWBINARYOP1_PACK", "INSTRUCTION_RAWBINARYOP8_PACK", "INSTRUCTION_RAWUNARY1_PACK", "INSTRUCTION_RAWUNARY8_PACK", "INSTRUCTION_RAWUNARYF_PACK",
+           "INSTRUCTION_BINARYOP1_PACK", "INSTRUCTION_BINARYOP8_PACK", "INSTRUCTION_UNARY1_PACK", "INSTRUCTION_UNARY8_PACK", "INSTRUCTION_UNARYF_PACK",
            "Instructions",
            "MnemonicEntry", "MnemonicMapping",
            "inst_to_int", "int_to_inst", "inst_to_name",
@@ -19,10 +22,14 @@ __all__ = ["Colors",
 
            "StatusFlags",
            "STATUS_ZERO", "STATUS_HALTED", "STATUS_NEXT", "STATUS_FAULT",
+           "status_stringify",
 
            "VQSXI_MAGIC",
            "VQSXI_DIM_FORMAT", "VQSXI_CDEPTH_FORMAT"
            ]
+
+# Special architecture constants
+ENDIANESS = "<" # '<' for little-endian. '>' for big-endian.
 
 # Color constants
 @enum.unique
@@ -99,12 +106,19 @@ def str_to_name(string : str) -> Colors | None:
 
 
 # VQsX Bytecode Utilities
-INSTRUCTION_PACK = "<B" # Struct fmt argument for packing operandless opcodes
-INSTRUCTION_BINARYOP1_PACK = "<BBB" # Struct fmt argument for packing binary opcodes with 8-bit operands.
-INSTRUCTION_BINARYOP8_PACK = "<BQQ" # Struct fmt argument for packing binary opcodes with 64-bit operands.
-INSTRUCTION_UNARY1_PACK = "<BB" # Struct fmt argument for packing unary opcodes with an 8-bit operand.
-INSTRUCTION_UNARY8_PACK = "<BQ" # Struct fmt argument for packing unary opcodes with a 64-bit operand.
-INSTRUCTION_UNARYF_PACK = "<Bd" # Struct fmt argument for packing unary opcodes with a 64-bit IEEE 754 operand.
+INSTRUCTION_PACK = f"{ENDIANESS}B" # Struct fmt argument for packing operandless opcodes
+
+INSTRUCTION_RAWBINARYOP1_PACK = f"BB" # Struct fmt argument for packing raw binary 8-bit operands.
+INSTRUCTION_RAWBINARYOP8_PACK = f"QQ" # Struct fmt argument for packing raw binary 64-bit operands.
+INSTRUCTION_RAWUNARY1_PACK = f"B" # Struct fmt argument for packing a raw unary 8-bit operand.
+INSTRUCTION_RAWUNARY8_PACK = f"Q" # Struct fmt argument for packing a raw unary 64-bit operand.
+INSTRUCTION_RAWUNARYF_PACK = f"d" # Struct fmt argument for packing a raw unary 64-bit IEEE 754 operand.
+
+INSTRUCTION_BINARYOP1_PACK = f"{ENDIANESS}B{INSTRUCTION_RAWBINARYOP1_PACK}" # Struct fmt argument for packing binary opcodes with 8-bit operands.
+INSTRUCTION_BINARYOP8_PACK = f"{ENDIANESS}B{INSTRUCTION_RAWBINARYOP8_PACK}" # Struct fmt argument for packing binary opcodes with 64-bit operands.
+INSTRUCTION_UNARY1_PACK = f"{ENDIANESS}B{INSTRUCTION_RAWUNARY1_PACK}" # Struct fmt argument for packing unary opcodes with an 8-bit operand.
+INSTRUCTION_UNARY8_PACK = f"{ENDIANESS}B{INSTRUCTION_RAWUNARY8_PACK}" # Struct fmt argument for packing unary opcodes with a 64-bit operand.
+INSTRUCTION_UNARYF_PACK = f"{ENDIANESS}B{INSTRUCTION_RAWUNARYF_PACK}" # Struct fmt argument for packing unary opcodes with a 64-bit IEEE 754 operand.
 
 @enum.unique
 @enum.verify(enum.CONTINUOUS)
@@ -165,7 +179,9 @@ MnemonicMapping : types.MappingProxyType = types.MappingProxyType({
     Instructions.SETORIGIN: MnemonicEntry(Instructions.SETORIGIN, "setorigin", "sori"),
     Instructions.BRIGHTNESS: MnemonicEntry(Instructions.BRIGHTNESS, "brightness", "bri"),
     Instructions.SCALE: MnemonicEntry(Instructions.SCALE, "scale", "scl"),
-    Instructions.COLOR: MnemonicEntry(Instructions.COLOR, "color", "clr")
+    Instructions.COLOR: MnemonicEntry(Instructions.COLOR, "color", "clr"),
+    # FILL
+    Instructions.NOOP: MnemonicEntry(Instructions.NOOP, "no-operation", "nop")
 })
 
 def inst_to_int(inst : Instructions) -> int:
@@ -262,9 +278,41 @@ STATUS_HALTED = StatusFlags.HALTED
 STATUS_NEXT = StatusFlags.NEXT
 STATUS_FAULT = StatusFlags.FAULT
 
+# good utilities for status
+def status_stringify(stat : StatusFlags) -> str:
+    jio = io.StringIO("") # Create builder boi
+
+    if stat == STATUS_ZERO: # Deal with zero aka clear aka running with no waiting
+        jio.write("ZERO")
+        return jio.getvalue()
+    
+    # utility internals
+    def lenio(stream : io.IOBase) -> int:
+        pretold = stream.tell() # Get the stream position for reset purposes.
+        stream.seek(0, os.SEEK_END) # Seek to end for size.
+        told = stream.tell() # Get the stream position. The stream has tell, hence its told. In this state, its the size of the stream.
+        stream.seek(pretold, os.SEEK_SET) # Reset now
+        return told
+    
+    def jiopipe(stream : io.IOBase):
+        if lenio(stream) > 0:
+            stream.write("|")
+    
+    # Time to deal with messages
+    if stat & STATUS_HALTED:
+        jiopipe(jio)
+        jio.write("HALT")
+    if stat & STATUS_NEXT:
+        jiopipe(jio)
+        jio.write("NEXT")
+    if stat & STATUS_FAULT:
+        jiopipe(jio)
+        jio.write("FAULT")
+    return jio.getvalue()
+
 
 # Constants useful for VQsXi support
 VQSXI_MAGIC = list(b"VQsXi")
-VQSXI_DIM_FORMAT = "<QQ" # struct fmt argument for VQsXi dimensions
-VQSXI_CDEPTH_FORMAT = "<?" # struct fmt argument for VQsXi color depth
-VQSXI_BYTECODELEN_FORMAT = "<Q" # struct fmt argument for VQsXi bytecode length
+VQSXI_DIM_FORMAT = f"{ENDIANESS}QQ" # struct fmt argument for VQsXi dimensions
+VQSXI_CDEPTH_FORMAT = f"{ENDIANESS}?" # struct fmt argument for VQsXi color depth
+VQSXI_BYTECODELEN_FORMAT = f"{ENDIANESS}Q" # struct fmt argument for VQsXi bytecode length

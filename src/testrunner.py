@@ -3,6 +3,11 @@ import argparse, sys
 
 parser = argparse.ArgumentParser()
 
+parser.add_argument("-s", "--silent",
+                    dest="silent",
+                    action="store_true",
+                    help="Silent output?")
+
 parser.add_argument("input",
                     help="Location of the test binary to run.",
                     type=str)
@@ -10,25 +15,12 @@ parser.add_argument("input",
 # parse and fetch
 args = parser.parse_args(sys.argv[1:])
 finput = args.input
-
-class obsrv(vqsx.VQsXObserver):
-    def __init__(self, vm : vqsx.VQsXObserver):
-        self.vm : vqsx.VQsXaObserver = vm
-    
-    def onstep(self, post : bool):
-        print("ONSTEP", post, self.vm.status)
-
-    def fetchinst(self, inst : vqsx.Instructions):
-        nam = vqsx.inst_to_name(inst)
-        if nam is not None: nam = f"[{nam.name}]"
-        print("FETCHINST", nam)
-
-    def halt(self, faulty : bool):
-        print("HALT", "faulty" if faulty else "hlt")
+silent = args.silent
 
 
 ve = vqsx.VQsXExecutor(vqsx.NullOpBehavior.NOOP)
-ve.register(obsrv(ve))
+observer = vqsx.obsrv(ve, silent)
+ve.register(observer)
 with open(finput, "rb") as f:
     ve.load(f.read())
 ve.run()
