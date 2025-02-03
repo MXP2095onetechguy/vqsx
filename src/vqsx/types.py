@@ -6,7 +6,13 @@ This module mostly houses exception types, but can be expanded later on.
 """
 
 __all__ = ["VQsXException",
-           ""]
+           
+           "VQsXExecutorException", "VQsXImageEngineException",
+
+           "IllegalInstructionException",
+           
+           "VQsXAssemblerException",
+           "VQsXInvalidLabelException"]
 
 # Base Exception
 class VQsXException(Exception):
@@ -74,3 +80,20 @@ class VQsXiBytecodeUnderflowException(VQsXImageEngineException):
         self.expected = expected
         self.actual = actual
 
+
+class VQsXAssemblerException(VQsXException):
+    """
+    Superclass exception for all VQsX Assembler related errors.
+    """
+    pass
+
+
+class VQsXInvalidLabelException(VQsXAssemblerException):
+    """
+    Exception for when an invalid label is encountered by the assembler.
+    """
+    def __init__(self, message, offender : str, line : int):
+        super().__init__(message)
+
+        self.offender = offender
+        self.line = line

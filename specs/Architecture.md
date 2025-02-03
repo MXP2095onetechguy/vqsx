@@ -13,7 +13,7 @@ There are two stacks in VQsX, which are implemented via [registers](Registers.md
 - Call: The call stack is used to manage the subroutines of VQsX
 
 ## Faults
-There are also faults which can be triggered. If a fault is triggered, then the vector engine will halt and the corresponding [status register flag](Registers.md#Status%20Register) is raised. Faults can be triggered by things such as bad instruction calls, and stack faults. Faults basically are things that halt the vector engine that isn't by the user's own will or the external hardware's will.
+There are also faults which can be triggered. If a fault is triggered, then the vector engine will halt and the corresponding [status register flag](Registers.md#Status%20Register) is raised. Faults can be triggered by things such as bad (illegal/invalid) instruction calls, and stack faults. Faults basically are things that halt the vector engine that isn't by the user's own will or the external hardware's will.
 
 
 ## NEXT

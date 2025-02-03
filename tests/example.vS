@@ -1,9 +1,3 @@
-These are examples for the VQsX [assembly](Assembly.md), [Forth](Forth.md) and [instruction set](Instruction%20Set.md).
-
-## General Assembly Demo
-This is a general assembly demo program for VQsX.
-
-```
 # VQsX Assembly Program to Draw a Square
 
 .entry START          # Directive to declare entry point.
@@ -34,11 +28,3 @@ This is a general assembly demo program for VQsX.
 
     STPOP             # Restore pen state
     RETURN            # Return to the main program
-
-```
-
-## General Forth Demo
-This is a general forth demo program for VQsX.
-```
-
-```

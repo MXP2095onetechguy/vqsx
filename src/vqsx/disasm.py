@@ -1,3 +1,7 @@
+"""
+Library for disassembling VQsX binaries back to their assembly.
+"""
+
 from .constants import Instructions, is_noop
 
 __all__ = ["Disassembler"]

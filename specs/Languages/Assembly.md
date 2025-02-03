@@ -18,9 +18,9 @@ VQsX assembly resembles 6502 assembly with a sprinkle of Javascript and Shell sc
 
 There are identifiers in VQsX assembly for labels. These labels are present to allow simplified call instructions. These identifiers are specified in [identifiers](#Identifiers).
 
-The VQsX assembly language has labels, which are valid identifiers that ends with a ":" to signify it as a label. The labels may not have any indentation.
+The VQsX assembly language has labels, which are valid identifiers that begins and ends with a ":" to signify it as a label. The labels may not have any indentation.
 
-Each instruction mnemonic must be indented by 1 tab or 4 spaces to signify it as an instruction instead of a label. The instructions must be a valid mnemonic or full name, capitalized. Each instruction must be on their own line and may be terminated with a semicolon (**;**).
+Each instruction mnemonic must be indented by 1 tab or 4 spaces to signify it as an instruction instead of a label. The instructions must be a valid mnemonic or full name, fully capitalized (mnemonic instructions may be in full lowercase). Each instruction must be on their own line and may be terminated with a semicolon (**;**).
 
 A comment starts with a **#** and may be anywhere. 
 
