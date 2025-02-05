@@ -3,11 +3,11 @@ Turtle implementation of a VQsXObserver.
 """
 
 import turtle as t
-from .. import VQsXObserver, VQsXExecutor as VExec
+from .. import VQsXStubObserver, VQsXExecutor as VExec
 
 __all__ = ["TurtleObserver"]
 
-class TurtleObserver(VQsXObserver):
+class TurtleObserver(VQsXStubObserver):
     def __init__(self, vexec : VExec, screen : t.TurtleScreen, turtle : t.Turtle):
         self.screen = screen
         self.turtle = turtle

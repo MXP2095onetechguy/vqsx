@@ -13,6 +13,7 @@ class obsrv(VQsXaObserver):
     The testrunner observer.
 
     This observer is used by the testrunner script and is made for debugging purposes.
+    This observer is not meant for general use.
     """
     def __init__(self, vm : VQsXExecutor, silent : bool):
         self.vm : VQsXExecutor = vm

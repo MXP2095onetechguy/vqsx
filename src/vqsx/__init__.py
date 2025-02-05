@@ -19,9 +19,10 @@ from .types import InvalidVQsXiMagicException, VQsXiBadFieldException, VQsXiByte
 from .types import VQsXAssemblerException
 from .types import VQsXInvalidLabelException
 
+from .observers import VQsXObserver, VQsXaObserver, VQsXStubObserver
+
 from .vm import RGBColor, ColorMap, map_color
 from .vm import NullOpBehavior
-from .vm import VQsXaObserver, VQsXObserver
 from .vm import VQsXExecutor, ImageEngine
 
 from .asm import Assembler, Builder
@@ -45,9 +46,10 @@ __all__ = ["Colors",
            "VQsXExecutorException", "VQsXImageEngineException",
            "InvalidVQsXiMagicException", "VQsXiBadFieldException", "VQsXiByteCodeUnderflowException",
 
+           "VQsXObserver", "VQsXaObserver", "VQsXStubObserver",
+           
            "RGBColor", "ColorMap", "map_color", 
            "NullOpBehavior",
-           "VQsXaObserver", "VQsXObserver",
            "VQsXExecutor", "ImageEngine",
 
            "Assembler", "Builder",

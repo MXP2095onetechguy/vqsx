@@ -11,6 +11,8 @@ from .constants import INSTRUCTION_PACK, INSTRUCTION_BINARYOP1_PACK, INSTRUCTION
 
 from .types import InvalidVQsXiMagicException, VQsXiBadFieldException, VQsXiBytecodeUnderflowException
 
+from .observers import VQsXObserver, VQsXaObserver, VQsXStubObserver, ObserverEvents
+
 import typing, types, enum
 import io, struct
 import functools
@@ -31,7 +33,7 @@ __all__ = ["RGBColor", "ColorMap",
            "map_color", 
            "NullOpBehavior",
            "ByteCodeStream",
-           "VQsXaObserver", "VQsXObserver",
+           "VQsXObserver", "VQsXaObserver", "VQsXStubObserver",
            "VQsXExecutor", "ImageEngine"
            ]
 
@@ -78,115 +80,6 @@ class NullOpBehavior(enum.IntEnum):
     HALT = 1
     FAULT = 2
 
-@enum.unique
-class ObserverEvents(enum.IntEnum):
-    """
-    Implementation detail enum for observers
-    """
-
-    # Special events
-    ONSTEP = 0
-    FETCHINST = 1
-    FETCHDECODEDINST = 2
-    HALT = 3
-
-    # Prefix 100 for anti-collision between special events
-    POSITION = 100
-    CENTER = 101
-
-
-class VQsXaObserver(ABC, object):
-    """
-    The VQsX Abstract Observer.
-
-    This class is an observer class intended to be inherited.
-    """
-
-    @abstractmethod
-    def onstep(self, post : bool):
-        """
-        Run whenever the VM fetches and executes an instruction.
-
-        post - Boolean argument. False when this onstep is called before the fetch and execution. True when called after fetch and execution.
-
-        This function is not called when an invalid instruction is encountered.
-        """
-
-    @abstractmethod
-    def fetchinst(self, inst : int):
-        """
-        Run whenever the VM has fetched but hasn't decoded it.
-
-        inst - The undecoded instruction.
-        """
-
-    @abstractmethod
-    def fetchdecodedinst(self, inst : Instructions):
-        """
-        Run whenever the VM has decoded the instruction.
-
-        inst - Instruction argument.
-        """
-
-    @abstractmethod
-    def halt(self, faulty : bool):
-        """
-        Run whenever the VM has halted (fault or not).
-
-        faulty - Whether the halting is faulty in nature.
-
-        This method is also the fault observer. Just check the faulty argument.
-        """
-
-
-    @abstractmethod
-    def position(self, x : int, y : int):
-        """
-        Run whenever the VM encountered a POSITION instruction.
-
-        x - x position to move to
-        y - y position to move to
-        """
-
-    @abstractmethod
-    def center(self):
-        """
-        Run whenever the VM encountered a CENTER instruction.
-        """
-
-    @abstractmethod
-    def origin(self):
-        """
-        Run whenever the VM encountered an ORIGIN instruction.
-        """
-
-class VQsXObserver(VQsXaObserver):
-    """
-    The VQsX Observer.
-
-    This class is a concrete-stub implementation of the VQsX Abstract Observer.
-    Implement the method stubs as needed. This class is intended to be used as an easy-to-inherit class.
-    """
-
-    def onstep(self, post : bool):
-        "stub"
-
-    def fetchinst(self, inst : int):
-        "stub"
-
-    def fetchdecodedinst(self, inst : Instructions):
-        "stub"
-
-    def halt(self, faulty : bool):
-        "stub"
-
-
-    def position(self, x, y):
-        "stub"
-
-    def center(self):
-        "stub"
-
 class VQsXExecutor(object):
     """
     The VQsX virtual machine.
@@ -202,7 +95,7 @@ class VQsXExecutor(object):
         super().__init__()
 
         # Observers for observing events like calls from the VM.
-        self.__observers : set[VQsXaObserver] = set()
+        self.__observers : set[VQsXObserver] = set()
 
         # Set the behavior of the null opcode
         # Currently faulty, this should be user settable
@@ -218,54 +111,6 @@ class VQsXExecutor(object):
         self.ipc : int = self.mst # IPC - Instruction Pointer/Program Counter
 
         self.status : StatusFlags = STATUS_ZERO | STATUS_HALTED # Status - Status register
-
-
-    def register(self, observer : VQsXaObserver):
-        """
-        Registers an observer with the VQsX VM.
-        """
-        self.__observers.add(observer)
-
-    def deregister(self, observer : VQsXaObserver) -> bool:
-        """
-        Unregisters an observer with the VQsX VM.
-
-        A True return value means the observer has been removed succesfully.
-        A False return value means the observer wasn't removed succesfully.
-        """
-
-        try:
-            self.__observers.remove(observer)
-            return True
-        except KeyError:
-            return False
-        
-    def __notify_observers(self, event : ObserverEvents, *args, **kwargs):
-        """
-        Notify observers.
-
-        event is an observer event
-        
-        This function is an implementation detail. Don't rely on this.
-        """
-
-        for observer in self.__observers:
-
-            # Special events
-            if event == ObserverEvents.ONSTEP:
-                observer.onstep(*args, **kwargs) # Instruction fetched (pre/post)
-            elif event == ObserverEvents.FETCHINST:
-                observer.fetchinst(*args, **kwargs) # Instruction fetch predecoded
-            elif event == ObserverEvents.FETCHDECODEDINST: # Instruction fetch postdecoded
-                observer.fetchdecodedinst(*args, **kwargs)
-            elif event == ObserverEvents.HALT:
-                observer.halt(*args, **kwargs) # VM Halted
-
-            # Instructions!
-            if event == ObserverEvents.POSITION:
-                observer.position(*args, **kwargs) # hey, position! Get your x & y!
-            elif event == ObserverEvents.CENTER:
-                observer.center(*args, **kwargs) # hey, center!
 
 
     @functools.singledispatchmethod
@@ -386,12 +231,67 @@ class VQsXExecutor(object):
 
 
 
+    def register(self, observer : VQsXObserver):
+        """
+        Registers an observer with the VQsX VM.
+        """
+        self.__observers.add(observer)
+
+    def deregister(self, observer : VQsXObserver) -> bool:
+        """
+        Unregisters an observer with the VQsX VM.
+
+        A True return value means the observer has been removed succesfully.
+        A False return value means the observer wasn't removed succesfully.
+        """
+
+        try:
+            self.__observers.remove(observer)
+            return True
+        except KeyError:
+            return False
+        
+    def __notify_observers(self, event : ObserverEvents, *args, **kwargs):
+        """
+        Notify observers.
+
+        event is an observer event
+        
+        This function is an implementation detail. Don't rely on this.
+        """
+
+        for observer in self.__observers: # Notify all observers
+            # We separate all the observer methods so its simpler on the observer's side.
+            # Even if its kinda WET, we do this so we can call the appropriate observer methods.
+
+            # Special events
+            if event == ObserverEvents.ONSTEP:
+                observer.onstep(*args, **kwargs) # Instruction fetched (pre/post)
+            elif event == ObserverEvents.FETCHINST:
+                observer.fetchinst(*args, **kwargs) # Instruction fetch predecoded
+            elif event == ObserverEvents.FETCHDECODEDINST: # Instruction fetch postdecoded
+                observer.fetchdecodedinst(*args, **kwargs)
+            elif event == ObserverEvents.HALT:
+                observer.halt(*args, **kwargs) # VM Halted
+
+            # Instructions!
+            if event == ObserverEvents.POSITION:
+                observer.position(*args, **kwargs) # hey, position! Get your x & y!
+            elif event == ObserverEvents.CENTER:
+                observer.center(*args, **kwargs) # hey, center!
+            elif event == ObserverEvents.ORIGIN:
+                observer.origin(*args, **kwargs) # hey origin!
+
+
+
     def __step_instructions(self, inst : Instructions):
         if inst == Instructions.POSITION:
             pos : tuple[int, int] = self.__fetch_binaryop8()
             self.__notify_observers(ObserverEvents.POSITION, pos[0], pos[1])
         elif inst == Instructions.CENTER:
             self.__notify_observers(ObserverEvents.CENTER)
+        elif inst == Instructions.ORIGIN:
+            self.__notify_observers(ObserverEvents.ORIGIN)
         else:
             return True
         
