@@ -142,10 +142,10 @@ class Builder(contextlib.AbstractContextManager, object):
     This class directly assembles VQsX binaries without any VQsX assembly being involved.
     Each method call creates a new instruction and appends it.
 
-    This class cannot undo mistakes due to the nature of the building/assembly method.
+    This class cannot undo mistakes due to the nature of the building/assembly method that is used internally.
     """
-    def __init__(self):
-        self.bstream = io.BytesIO()
+    def __init__(self, chunks : bytes=None):
+        self.bstream = io.BytesIO(chunks)
 
 
     def reset(self):

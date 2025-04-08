@@ -5,6 +5,8 @@ Virtual machine for executing VQsX binaries.
 from .constants import Instructions, int_to_inst, is_noop, is_halt
 from .constants import StatusFlags, STATUS_ZERO, STATUS_HALTED, STATUS_NEXT, STATUS_FAULT
 from .constants import Colors, index_to_name
+from .constants import RGBColor, map_color
+from .constants import SetOriginValues, sov_to_int, int_to_sov
 from .constants import VQSXI_MAGIC, VQSXI_DIM_FORMAT, VQSXI_CDEPTH_FORMAT, VQSXI_BYTECODELEN_FORMAT
 from .constants import INSTRUCTION_RAWBINARYOP1_PACK, INSTRUCTION_RAWBINARYOP8_PACK, INSTRUCTION_RAWUNARY1_PACK, INSTRUCTION_RAWUNARY8_PACK, INSTRUCTION_RAWUNARYF_PACK
 from .constants import INSTRUCTION_PACK, INSTRUCTION_BINARYOP1_PACK, INSTRUCTION_BINARYOP8_PACK, INSTRUCTION_UNARY1_PACK, INSTRUCTION_UNARY8_PACK, INSTRUCTION_UNARYF_PACK
@@ -16,6 +18,7 @@ from .observers import VQsXObserver, VQsXaObserver, VQsXStubObserver, ObserverEv
 import typing, types, enum
 import io, struct
 import functools
+import collections.abc as cabc
 
 # Hidden
 _tb_halt = False # traceback on halt
@@ -29,43 +32,12 @@ class _nsFetchError(typing.NamedTuple):
 
 from abc import ABC, abstractmethod
 
-__all__ = ["RGBColor", "ColorMap", 
-           "map_color", 
+__all__ = [
            "NullOpBehavior",
            "ByteCodeStream",
            "VQsXObserver", "VQsXaObserver", "VQsXStubObserver",
            "VQsXExecutor", "ImageEngine"
            ]
-
-class RGBColor(typing.NamedTuple):
-    """
-    Class for representing colors
-    """
-    red : int
-    blue : int
-    green : int
-
-ColorMap : types.MappingProxyType = types.MappingProxyType({
-    Colors.BRED: RGBColor(0xFF, 0x55, 0x55),
-    Colors.BGREEN: RGBColor(0x55, 0xFF, 0x55),
-    Colors.BBLUE: RGBColor(0x55, 0x55, 0xFF),
-    Colors.BYELLOW: RGBColor(0xFF, 0xFF, 0x55),
-    Colors.BMAGENTA: RGBColor(0xFF, 0x55, 0xFF),
-    Colors.BCYAN: RGBColor(0x55, 0xFF, 0xFF),
-    Colors.BORANGE: RGBColor(0xFF, 0xAA, 0x55),
-    Colors.BPINK: RGBColor(0xFF, 0x69, 0xB4),
-    Colors.BLIME: RGBColor(0xAA, 0xFF, 0x55)
-})
-
-def map_color(color : int) -> RGBColor:
-    """
-    Map index to their colors.
-    This function unlike index_to_name, would return the default color of BRED if an index is invalid.
-    This default value is conformant to the specification of VQsX.
-    """
-    color : Colors | int | None = index_to_name(color)
-    if color is None: color = Colors.BRED
-    return ColorMap[color]
 
 
 ByteCodeStream = bytes | bytearray
@@ -183,6 +155,20 @@ class VQsXExecutor(object):
         return (self.status & STATUS_HALTED)
 
 
+    def __advance(self, count : int) -> tuple[int, int]:
+        """
+        DRY attempt for advance.
+
+        Return
+            Index 0 - Old ipc
+            Index 1 - Next ipc
+        """
+        oldipc = self.ipc
+        nextipc = oldipc+count
+        self.ipc = nextipc
+        return (oldipc, nextipc)
+
+
     def __fetch(self) -> int | _nsFetchError:
         """
         Fetch bytes and move on.
@@ -192,7 +178,7 @@ class VQsXExecutor(object):
         # print(self.bytecode, self.ipc, len(self.bytecode))
         try:
             mc = self.bytecode[self.ipc]
-            self.ipc = self.ipc + 1
+            self.ipc = self.__advance(1)[1]
             return mc
         except IndexError:
             ns : _nsFetchError = _nsFetchError(self.ipc, self.bytecode, len(self.bytecode))
@@ -204,12 +190,10 @@ class VQsXExecutor(object):
         """
 
         ops = bytes()
-        nextipc = self.ipc+8
-        ops = ops + self.bytecode[self.ipc:nextipc]
-        self.ipc = nextipc
-        nextipc = self.ipc+8
-        ops = ops + self.bytecode[self.ipc:nextipc]
-        self.ipc = nextipc
+        oldipc, nextipc = self.__advance(8)
+        ops = ops + self.bytecode[oldipc:nextipc]
+        oldipc, nextipc = self.__advance(8)
+        ops = ops + self.bytecode[oldipc:nextipc]
         # print(hex(self.bytecode[self.ipc]))
 
         op1, op2 = struct.unpack(INSTRUCTION_RAWBINARYOP8_PACK, ops)
@@ -219,6 +203,54 @@ class VQsXExecutor(object):
         """
         Fetch Binary 8-bit operands.
         """
+        ops = bytes()
+        oldipc, nextipc = self.__advance(1)
+        ops = ops + self.bytecode[oldipc:nextipc]
+        oldipc, nextipc = self.__advance(1)
+        ops = ops + self.bytecode[oldipc:nextipc]
+        # print(hex(self.bytecode[self.ipc]))
+
+        op1, op2 = struct.unpack(INSTRUCTION_RAWBINARYOP1_PACK, ops)
+        return (op1, op2)
+    
+    def __fetch_unary1(self) -> int:
+        """
+        Fetch a Unary 8-bit operand
+        """
+
+        sop = bytes()
+        oldipc, nextipc = self.__advance(1)
+        sop = bytes(self.bytecode[oldipc:nextipc])
+
+        op, *_ = struct.unpack(INSTRUCTION_RAWUNARY1_PACK, sop)
+
+        return op
+    
+    def __fetch_unary8(self) -> int:
+        """
+        Fetch a Unary 64-bit operand
+        """
+
+        sop = bytes()
+        oldipc, nextipc = self.__advance(8)
+        sop = bytes(self.bytecode[oldipc:nextipc])
+
+        op, *_ = struct.unpack(INSTRUCTION_RAWUNARY8_PACK, sop)
+
+        return op
+    
+    def __fetch_unaryf(self) -> float:
+        """
+        Fetch an 64-bit IEEE 754 operand
+        """
+
+        sop = bytes()
+        oldipc, nextipc = self.__advance(8)
+        sop = bytes(self.bytecode[oldipc:nextipc])
+
+        op, *_ = struct.unpack(INSTRUCTION_RAWUNARYF_PACK, sop)
+
+        return op
     
     
     def spin(self):
@@ -264,27 +296,44 @@ class VQsXExecutor(object):
             # We separate all the observer methods so its simpler on the observer's side.
             # Even if its kinda WET, we do this so we can call the appropriate observer methods.
 
-            # Special events
-            if event == ObserverEvents.ONSTEP:
-                observer.onstep(*args, **kwargs) # Instruction fetched (pre/post)
-            elif event == ObserverEvents.FETCHINST:
-                observer.fetchinst(*args, **kwargs) # Instruction fetch predecoded
-            elif event == ObserverEvents.FETCHDECODEDINST: # Instruction fetch postdecoded
-                observer.fetchdecodedinst(*args, **kwargs)
-            elif event == ObserverEvents.HALT:
-                observer.halt(*args, **kwargs) # VM Halted
+            # Event MatchDB
+            # Used for writing DRY and maintainable code
+            MATCHDB : dict[ObserverEvents, types.FunctionType] = {
+                # Special events
+                ObserverEvents.ONSTEP: observer.onstep,
+                ObserverEvents.FETCHINST: observer.fetchinst,
+                ObserverEvents.FETCHDECODEDINST: observer.fetchdecodedinst,
+                ObserverEvents.HALT: observer.halt,
 
-            # Instructions!
-            if event == ObserverEvents.POSITION:
-                observer.position(*args, **kwargs) # hey, position! Get your x & y!
-            elif event == ObserverEvents.CENTER:
-                observer.center(*args, **kwargs) # hey, center!
-            elif event == ObserverEvents.ORIGIN:
-                observer.origin(*args, **kwargs) # hey origin!
+                # Instructions!
+                ObserverEvents.POSITION: observer.position, # hey, position! Get your x & y!
+                ObserverEvents.CENTER: observer.center, # hey, center!
+                ObserverEvents.ORIGIN: observer.origin, # hey origin!
+                ObserverEvents.SETORIGIN: observer.setorigin, # hey, setorigin! Get your setorigin values!
+                ObserverEvents.BRIGHTNESS: observer.brightness, # hey, brightness! Get your brightness values!
+                ObserverEvents.SCALE: observer.scale, # hey, scale! Get your scale factor values!
+                ObserverEvents.COLOR: observer.color, # hey, color! Get your color values here!
+                ObserverEvents.DRAW: observer.draw, # hey, draw! Get your x & y!
+                ObserverEvents.FORWARD: observer.forward, # hey, forward! Move forward!
+                ObserverEvents.BACKWARD: observer.backward, # hey, backwards! Move backwards!
+                ObserverEvents.DRAWFORWARD: observer.drawforward, # hey, drawforward! Move and draw forward!
+                ObserverEvents.DRAWBACKWARD: observer.drawbackward, # hey, drawbackward! Move and draw backward!
+                ObserverEvents.ROTATEDEG: observer.rotatedeg, # TODO: Do more of the hey!
+                ObserverEvents.ROTATERAD: observer.rotaterad,
+                ObserverEvents.ROTATERDEG: observer.rotaterdeg,
+                ObserverEvents.ROTATERRAD: observer.rotaterrad,
+                ObserverEvents.ROTATEORIGIN: observer.rotateorigin,
+                ObserverEvents.ROTATESETORIGIN: observer.rotatesetorigin,
+            }
+
+            # Maintainability
+            handler = MATCHDB[event]
+            handler(*args, **kwargs)
 
 
 
     def __step_instructions(self, inst : Instructions):
+
         if inst == Instructions.POSITION:
             pos : tuple[int, int] = self.__fetch_binaryop8()
             self.__notify_observers(ObserverEvents.POSITION, pos[0], pos[1])
@@ -292,10 +341,57 @@ class VQsXExecutor(object):
             self.__notify_observers(ObserverEvents.CENTER)
         elif inst == Instructions.ORIGIN:
             self.__notify_observers(ObserverEvents.ORIGIN)
+        elif inst == Instructions.SETORIGIN:
+            ori : int = self.__fetch_unary1()
+            ori : SetOriginValues = int_to_sov(ori)
+            self.__notify_observers(ObserverEvents.SETORIGIN, ori)
+        elif inst == Instructions.BRIGHTNESS:
+            bri : int = self.__fetch_unary1()
+            self.__notify_observers(ObserverEvents.BRIGHTNESS, bri)
+        elif inst == Instructions.SCALE:
+            scalef : int = self.__fetch_unary1()
+            self.__notify_observers(ObserverEvents.SCALE, scalef)
+        elif inst == Instructions.COLOR:
+            coloridx : int = self.__fetch_unary1()
+            color : Colors = index_to_name(coloridx)
+            actualcolor : RGBColor = map_color(coloridx)
+            self.__notify_observers(ObserverEvents.COLOR, color, actualcolor)
+        elif inst == Instructions.DRAW:
+            pos : tuple[int, int] = self.__fetch_binaryop8()
+            self.__notify_observers(ObserverEvents.DRAW, pos[0], pos[1])
+        elif inst == Instructions.FORWARD:
+            dist : int = self.__fetch_unary8()
+            self.__notify_observers(ObserverEvents.FORWARD, dist)
+        elif inst == Instructions.BACKWARDS:
+            dist : int = self.__fetch_unary8()
+            self.__notify_observers(ObserverEvents.BACKWARD, dist)
+        elif inst == Instructions.DRAWFORWARD:
+            dist : int = self.__fetch_unary8()
+            self.__notify_observers(ObserverEvents.DRAWFORWARD, dist)
+        elif inst == Instructions.BACKWARDS:
+            dist : int = self.__fetch_unary8()
+            self.__notify_observers(ObserverEvents.DRAWBACKWARD, dist)
+        elif inst == Instructions.ROTATEDEG:
+            angle : float = self.__fetch_unaryf()
+            self.__notify_observers(ObserverEvents.ROTATEDEG, angle)
+        elif inst == Instructions.ROTATERAD:
+            angle : float = self.__fetch_unaryf()
+            self.__notify_observers(ObserverEvents.ROTATERAD, angle)
+        elif inst == Instructions.ROTATERDEG:
+            angle : float = self.__fetch_unaryf()
+            self.__notify_observers(ObserverEvents.ROTATERDEG, angle)
+        elif inst == Instructions.ROTATERRAD:
+            angle : float = self.__fetch_unaryf()
+            self.__notify_observers(ObserverEvents.ROTATERAD, angle)
+        elif inst == Instructions.ROTATEORIGIN:
+            self.__notify_observers(ObserverEvents.ROTATEORIGIN)
+        elif inst == Instructions.ROTATESETORIGIN:
+            ori : int = self.__fetch_unary1()
+            self.__notify_observers(ObserverEvents.ROTATESETORIGIN)
         else:
-            return True
+            return True # Unknown?
         
-        return False
+        return False # Nah
 
     def step(self):
         """

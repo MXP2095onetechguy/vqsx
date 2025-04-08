@@ -2,7 +2,9 @@
 Testrunner VQsXObserver
 """
 
-from .. import VQsXaObserver, VQsXExecutor, status_stringify, Instructions, inst_to_name
+from .. import VQsXaObserver, VQsXExecutor
+from .. import Instructions, SetOriginValues, Colors, RGBColor
+from .. import status_stringify, inst_to_name, sov_to_str, name_to_index, name_to_str
 
 __all__ = [
         "obsrv"
@@ -48,3 +50,48 @@ class obsrv(VQsXaObserver):
 
     def origin(self):
         print("ORIGIN")
+
+    def setorigin(self, ori : SetOriginValues):
+        print("SETORIGIN", sov_to_str(ori))
+
+    def brightness(self, lvl : int):
+        print("BRIGHTNESS", lvl)
+
+    def scale(self, scale : int):
+        print("SCALE", scale)
+
+    def color(self, color : Colors, actualcolor : RGBColor):
+        print("COLOR", name_to_index(color), name_to_str(color), actualcolor)
+
+    def draw(self, x : int, y : int):
+        print("DRAW", x, y)
+    
+    def forward(self, dist : int):
+        print("FORWARD", dist)
+
+    def backward(self, dist : int):
+        print("BACKWARD", dist)
+
+    def drawforward(self, dist):
+        print("DRAWFORWARD", dist)
+
+    def drawbackward(self, dist):
+        print("DRAWBACKWARD", dist)
+
+    def rotatedeg(self, angle):
+        print("ROTATEDEG", angle)
+
+    def rotaterad(self, angle):
+        print("ROTATERAD", angle)
+
+    def rotaterdeg(self, angle):
+        print("ROTATERDEG", angle)
+    
+    def rotaterrad(self, angle):
+        print("ROTATERRAD", angle)
+
+    def rotateorigin(self):
+        print("ROTATEORIGIN")
+
+    def rotatesetorigin(self, origin):
+        print("ROTATESETORIGIN", origin)

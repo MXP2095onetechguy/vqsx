@@ -4,5 +4,7 @@ src/vqsx/__pycache__
 src/*.vBin
 src/*.vX
 
+src/pef.png
+
 src/vqsx.html
 src/docs/

@@ -9,6 +9,8 @@ Constants common to different VQsX bits.
 __all__ = ["Colors",
            "name_to_index","index_to_name",
            "name_to_str","str_to_name",
+           "RGBColor", "ColorMap",
+           "map_color",
 
            "INSTRUCTION_PACK", 
            "INSTRUCTION_RAWBINARYOP1_PACK", "INSTRUCTION_RAWBINARYOP8_PACK", "INSTRUCTION_RAWUNARY1_PACK", "INSTRUCTION_RAWUNARY8_PACK", "INSTRUCTION_RAWUNARYF_PACK",
@@ -18,7 +20,8 @@ __all__ = ["Colors",
            "inst_to_int", "int_to_inst", "inst_to_name",
            "is_noop", "is_halt",
 
-           "SetOriginValues"
+           "SetOriginValues",
+           "int_to_sov", "sov_to_int", "sov_to_str", "str_to_sov",
 
            "StatusFlags",
            "STATUS_ZERO", "STATUS_HALTED", "STATUS_NEXT", "STATUS_FAULT",
@@ -104,14 +107,52 @@ def str_to_name(string : str) -> Colors | None:
         return Colors[string]
     return None
 
+class RGBColor(typing.NamedTuple):
+    """
+    Class for representing colors
+    """
+    red : int
+    green : int
+    blue : int
+
+ColorMap : types.MappingProxyType = types.MappingProxyType({
+    Colors.BRED: RGBColor(0xFF, 0x55, 0x55),
+    Colors.BGREEN: RGBColor(0x55, 0xFF, 0x55),
+    Colors.BBLUE: RGBColor(0x55, 0x55, 0xFF),
+    Colors.BYELLOW: RGBColor(0xFF, 0xFF, 0x55),
+    Colors.BMAGENTA: RGBColor(0xFF, 0x55, 0xFF),
+    Colors.BCYAN: RGBColor(0x55, 0xFF, 0xFF),
+    Colors.BORANGE: RGBColor(0xFF, 0xAA, 0x55),
+    Colors.BPINK: RGBColor(0xFF, 0x69, 0xB4),
+    Colors.BLIME: RGBColor(0xAA, 0xFF, 0x55),
+
+    Colors.BSKYBLUE: RGBColor(0x87, 0xCE, 0xFA),
+    Colors.BPURPLE: RGBColor(0xAA, 0x55, 0xFF),
+    Colors.BTEAL: RGBColor(0xAA, 0x55, 0xFF),
+
+    Colors.AZURE: RGBColor(0xF0, 0xFF, 0xFF),
+
+    Colors.BWHITE: RGBColor(0xFF, 0xFF, 0xFF)
+})
+
+def map_color(color : int) -> RGBColor:
+    """
+    Map index to their colors.
+    This function unlike index_to_name, would return the default color of BRED if an index is invalid.
+    This default value is conformant to the specification of VQsX.
+    """
+    color : Colors | int | None = index_to_name(color)
+    if color is None: color = Colors.BRED
+    return ColorMap[color]
+
 
 # VQsX Bytecode Utilities
 INSTRUCTION_PACK = f"{ENDIANESS}B" # Struct fmt argument for packing operandless opcodes
 
-INSTRUCTION_RAWBINARYOP1_PACK = f"BB" # Struct fmt argument for packing raw binary 8-bit operands.
-INSTRUCTION_RAWBINARYOP8_PACK = f"QQ" # Struct fmt argument for packing raw binary 64-bit operands.
-INSTRUCTION_RAWUNARY1_PACK = f"B" # Struct fmt argument for packing a raw unary 8-bit operand.
-INSTRUCTION_RAWUNARY8_PACK = f"Q" # Struct fmt argument for packing a raw unary 64-bit operand.
+INSTRUCTION_RAWBINARYOP1_PACK = f"bb" # Struct fmt argument for packing raw binary 8-bit operands.
+INSTRUCTION_RAWBINARYOP8_PACK = f"qq" # Struct fmt argument for packing raw binary 64-bit operands.
+INSTRUCTION_RAWUNARY1_PACK = f"b" # Struct fmt argument for packing a raw unary 8-bit operand.
+INSTRUCTION_RAWUNARY8_PACK = f"q" # Struct fmt argument for packing a raw unary 64-bit operand.
 INSTRUCTION_RAWUNARYF_PACK = f"d" # Struct fmt argument for packing a raw unary 64-bit IEEE 754 operand.
 
 INSTRUCTION_BINARYOP1_PACK = f"{ENDIANESS}B{INSTRUCTION_RAWBINARYOP1_PACK}" # Struct fmt argument for packing binary opcodes with 8-bit operands.
@@ -258,6 +299,36 @@ class SetOriginValues(enum.IntEnum, enum.ReprEnum):
     TOPLEFT = 0
     CENTER = 1
     BOTTOMLEFT = 2
+
+def sov_to_int(ori : SetOriginValues) -> int:
+    """
+    Converts a SETORIGIN value to an integer.
+    """
+    return ori.value
+
+def int_to_sov(num : int) -> SetOriginValues:
+    """
+    Converts an integer to a SETORIGIN value.
+    """
+    if num > (SetOriginValues.TOPLEFT - 1):
+        return SetOriginValues(num)
+    return None
+
+def sov_to_str(ori : SetOriginValues) -> str:
+    """
+    Converts a SETORIGIN value to its string representation.
+    """
+
+    return ori.name
+
+def str_to_sov(name : str) -> SetOriginValues:
+    """
+    Converts a string into a SETORIGIN value.
+    """
+
+    if name in SetOriginValues.__members__:
+        return SetOriginValues[name]
+    return None
 
 # Constants useful for the status register
 # Its used with bitfields and bitmasks

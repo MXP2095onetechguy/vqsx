@@ -29,6 +29,18 @@ def tinypack(b : vqsx.Builder):
     b.nop()
     b.position(0xFEFFAABBCAFED00D, 0xFACEABCDEF161718)
     b.center()
+    b.origin()
+    b.setorigin(SOV.CENTER)
+    b.brightness(10)
+    b.scale(10)
+    b.color(CLRs.AZURE)
+    b.draw(0xCAFE, 0xBABE)
+    b.forward(20)
+    b.backward(5)
+    b.drawforward(30)
+    b.drawforward(5)
+    b.rotatedeg(60)
+    b.rotaterad(10)
 
 CLRs = vqsx.Colors
 SOV = vqsx.SetOriginValues # Aliasing
